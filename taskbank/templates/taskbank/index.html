@@ -1,0 +1,70 @@
+{% extends 'taskbank/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Programming Task Bank</h1>
+    
+    <div class="row">
+        {% for task in tasks %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ task.title }}</h5>
+                    <p class="card-text">{{ task.description|truncatewords:20 }}</p>
+                    <p class="text-muted">Difficulty: {{ task.difficulty }}</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Select language:</label>
+                        <select class="form-select lang-select" data-task-id="{{ task.id }}">
+                            {% for lang in languages %}
+                            <option value="{{ lang.id }}">{{ lang.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <a href="#" class="btn btn-primary solve-btn" 
+                       data-task-id="{{ task.id }}"
+                       data-lang-id="{{ languages.first.id }}">
+                        Solve Task
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">No tasks available yet.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обновляем ссылки при изменении языка
+    document.querySelectorAll('.lang-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const taskId = this.dataset.taskId;
+            const langId = this.value;
+            const btn = document.querySelector(`.solve-btn[data-task-id="${taskId}"]`);
+            btn.dataset.langId = langId;
+        });
+    });
+    
+    // Обработка клика по кнопке Solve
+    document.querySelectorAll('.solve-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const taskId = this.dataset.taskId;
+            const langId = this.dataset.langId;
+            if (taskId && langId) {
+                window.location.href = `/task/${taskId}/${langId}/`;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+
+
+

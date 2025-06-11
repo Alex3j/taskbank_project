@@ -1,0 +1,40 @@
+{% extends 'taskbank/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-body">
+            <h2>You are blocked</h2>
+            <p>You have used all your attempts for this task in {{ language.name }}.</p>
+            <p>Please wait for <span id="time-left">{{ time_left }}</span> seconds before trying again.</p>
+            
+            <div class="progress mb-3">
+                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" style="width: 100%"></div>
+            </div>
+            
+            <a href="{% url 'task_detail' task.id language.id %}" class="btn btn-primary">Try Again</a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let timeLeft = {{ time_left }};
+    const progressBar = document.getElementById('progress-bar');
+    const timeLeftSpan = document.getElementById('time-left');
+    const interval = setInterval(() => {
+        timeLeft--;
+        timeLeftSpan.textContent = timeLeft;
+        progressBar.style.width = `${(timeLeft / {{ time_left }}) * 100}%`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(interval);
+            window.location.reload();
+        }
+    }, 1000);
+});
+</script>
+{% endblock %}
+
+

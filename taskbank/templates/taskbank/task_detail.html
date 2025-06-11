@@ -1,0 +1,144 @@
+{% extends 'taskbank/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Task Details</h1>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title">{{ task.title }}</h3>
+            <p class="card-text">{{ task.description }}</p>
+            <p class="text-muted">Difficulty: {{ task.difficulty.name }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">Your Solution</h4>
+                    <textarea id="code" class="form-control mb-3" rows="10" placeholder="Enter your code here..."></textarea>
+                    <button id="submit-btn" class="btn btn-primary">Submit Solution</button>
+                    <div id="result-alert" class="alert mt-3" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Attempts Status</h4>
+                    <p>Remaining attempts: <span id="attempts-left">{{ attempts_left }}</span></p>
+                    
+                    <div id="hint-container" class="mt-3 alert alert-info" style="display: none;">
+                        <h5>Hint</h5>
+                        <p id="hint-content">{{ solution.hint }}</p>
+                    </div>
+                    
+                    <div id="block-timer" class="mt-3 alert alert-danger" style="display: none;">
+                        <p>You are blocked for <span id="time-left">10</span> seconds</p>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h5>Initial Code</h5>
+                        <pre class="bg-light p-2 rounded">{{ solution.initial_code }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const submitBtn = document.getElementById('submit-btn');
+    const codeInput = document.getElementById('code');
+    const attemptsLeft = document.getElementById('attempts-left');
+    const hintContainer = document.getElementById('hint-container');
+    const resultAlert = document.getElementById('result-alert');
+    const blockTimer = document.getElementById('block-timer');
+    const timeLeftSpan = document.getElementById('time-left');
+    
+    let isBlocked = {{ is_blocked|yesno:"true,false" }};
+    let blockTime = {{ block_time|default:0 }};
+    
+    if (isBlocked) {
+        submitBtn.disabled = true;
+        blockTimer.style.display = 'block';
+        startBlockTimer(blockTime);
+    }
+    
+    function showAlert(message, type) {
+        resultAlert.textContent = message;
+        resultAlert.className = `alert alert-${type}`;
+        resultAlert.style.display = 'block';
+        setTimeout(() => resultAlert.style.display = 'none', 3000);
+    }
+    
+    function startBlockTimer(seconds) {
+        let timeLeft = seconds;
+        timeLeftSpan.textContent = timeLeft;
+        
+        const timer = setInterval(() => {
+            timeLeft--;
+            timeLeftSpan.textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                blockTimer.style.display = 'none';
+                submitBtn.disabled = false;
+                isBlocked = false;
+                location.reload();
+            }
+        }, 1000);
+    }
+    
+    submitBtn.addEventListener('click', function() {
+        if (isBlocked) {
+            showAlert('You are currently blocked', 'danger');
+            return;
+        }
+        
+        const userCode = codeInput.value.trim();
+        if (userCode.length < 5) {
+            showAlert('Code must be at least 5 characters', 'warning');
+            return;
+        }
+        
+        fetch(window.location.pathname + 'submit/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({ code: userCode })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'correct') {
+                showAlert(data.message, 'success');
+                attemptsLeft.textContent = data.attempts_left;
+                hintContainer.style.display = 'none';
+            } 
+            else if (data.status === 'incorrect') {
+                showAlert(data.message || 'Incorrect solution!', 'danger');
+                attemptsLeft.textContent = data.attempts_left;
+                if (data.attempts_left === 1) {
+                    hintContainer.style.display = 'block';
+                }
+            }
+            else if (data.status === 'blocked') {
+                isBlocked = true;
+                submitBtn.disabled = true;
+                blockTimer.style.display = 'block';
+                startBlockTimer(data.time_left);
+                if (data.hint) {
+                    hintContent.textContent = data.hint;
+                    hintContainer.style.display = 'block';
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+
+
